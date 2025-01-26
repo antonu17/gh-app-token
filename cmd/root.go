@@ -2,48 +2,57 @@ package cmd
 
 import (
 	"io"
-	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-var (
-	appID      string
-	privateKey string
-)
-
-var rootCmd = &cobra.Command{
-	Use:   "gh-app-token",
-	Short: "A CLI tool to manage GitHub App tokens",
-	Long:  `A longer description that spans multiple lines and likely contains examples and usage of using your application.`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if _, err := os.Stat(privateKey); err == nil {
-			content, err := os.ReadFile(privateKey)
-			if err != nil {
-				return err
+func newRootCmd() *cobra.Command {
+	var rootCmd = cobra.Command{
+		Use:   "gh-app-token",
+		Short: "A cli utility to manage GitHub App tokens",
+		Long:  `A cli utility to create and revoke Github App installation tokens`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) == 0 {
+				cmd.Help()
 			}
-			privateKey = string(content)
-		} else if !os.IsNotExist(err) {
-			return err
-		}
-		return nil
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			cmd.Help()
-		}
-	},
-}
+		},
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if viper.IsSet("app-id") {
+				_ = cmd.Flags().Set("app-id", viper.GetString("app-id"))
+			}
+			if viper.IsSet("private-key") {
+				_ = cmd.Flags().Set("private-key", viper.GetString("private-key"))
+			}
+			return nil
+		},
+	}
 
-func Execute(args []string, out io.Writer) error {
-	rootCmd.SetArgs(args)
-	rootCmd.SetOut(out)
-	return rootCmd.Execute()
-}
+	viper.AutomaticEnv()
 
-func init() {
-	rootCmd.PersistentFlags().StringVar(&appID, "app-id", "", "GitHub App ID")
-	rootCmd.PersistentFlags().StringVar(&privateKey, "private-key", "", "Path to the private key file or the private key itself")
+	rootCmd.PersistentFlags().String("app-id", "", "GitHub App ID")
+	viper.BindPFlag("app-id", rootCmd.PersistentFlags().Lookup("app-id"))
+	viper.BindEnv("app-id", "GITHUB_APP_ID")
+
+	rootCmd.PersistentFlags().String("private-key", "", "Path to the private key file or the private key itself")
+	viper.BindPFlag("private-key", rootCmd.PersistentFlags().Lookup("private-key"))
+	viper.BindEnv("private-key", "GITHUB_APP_PRIVATE_KEY")
+
 	rootCmd.MarkPersistentFlagRequired("app-id")
 	rootCmd.MarkPersistentFlagRequired("private-key")
+
+	return &rootCmd
+}
+
+func Execute(args []string, out io.Writer, err io.Writer) error {
+	rootCmd := newRootCmd()
+	rootCmd.AddCommand(newCreateCmd())
+	rootCmd.AddCommand(newRevokeCmd())
+	rootCmd.AddCommand(newInstallationCmd())
+
+	rootCmd.SetArgs(args)
+	rootCmd.SetOut(out)
+	rootCmd.SetErr(err)
+
+	return rootCmd.Execute()
 }
