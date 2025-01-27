@@ -5,9 +5,13 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/n26/gh-app-token/internal/github"
 )
 
-func newRootCmd() *cobra.Command {
+type GithubClientFactory func(string) github.GithubClient
+
+func newRootCmd(githubClientFactory GithubClientFactory) *cobra.Command {
 	var rootCmd = cobra.Command{
 		Use:   "gh-app-token",
 		Short: "A cli utility to manage GitHub App tokens",
@@ -17,38 +21,19 @@ func newRootCmd() *cobra.Command {
 				cmd.Help()
 			}
 		},
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if viper.IsSet("app-id") {
-				_ = cmd.Flags().Set("app-id", viper.GetString("app-id"))
-			}
-			if viper.IsSet("private-key") {
-				_ = cmd.Flags().Set("private-key", viper.GetString("private-key"))
-			}
-			return nil
-		},
 	}
 
-	viper.AutomaticEnv()
-
-	rootCmd.PersistentFlags().String("app-id", "", "GitHub App ID")
-	viper.BindPFlag("app-id", rootCmd.PersistentFlags().Lookup("app-id"))
-	viper.BindEnv("app-id", "GITHUB_APP_ID")
-
-	rootCmd.PersistentFlags().String("private-key", "", "Path to the private key file or the private key itself")
-	viper.BindPFlag("private-key", rootCmd.PersistentFlags().Lookup("private-key"))
-	viper.BindEnv("private-key", "GITHUB_APP_PRIVATE_KEY")
-
-	rootCmd.MarkPersistentFlagRequired("app-id")
-	rootCmd.MarkPersistentFlagRequired("private-key")
+	rootCmd.AddCommand(newCreateCmd(githubClientFactory))
+	rootCmd.AddCommand(newRevokeCmd(githubClientFactory))
+	rootCmd.AddCommand(newInstallationCmd())
 
 	return &rootCmd
 }
 
 func Execute(args []string, out io.Writer, err io.Writer) error {
-	rootCmd := newRootCmd()
-	rootCmd.AddCommand(newCreateCmd())
-	rootCmd.AddCommand(newRevokeCmd())
-	rootCmd.AddCommand(newInstallationCmd())
+	viper.AutomaticEnv()
+
+	rootCmd := newRootCmd(github.NewClient)
 
 	rootCmd.SetArgs(args)
 	rootCmd.SetOut(out)
