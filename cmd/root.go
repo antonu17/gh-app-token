@@ -7,11 +7,13 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/n26/gh-app-token/internal/github"
+	"github.com/n26/gh-app-token/internal/jwt"
 )
 
-type GithubClientFactory func(string) github.GithubClient
+type GithubClientFactory func(token string) github.GithubClient
+type JWTTokenFactory func(issuer string, privateKey string) (string, error)
 
-func newRootCmd(githubClientFactory GithubClientFactory) *cobra.Command {
+func newRootCmd(githubClientFactory GithubClientFactory, jwtTokenFactory JWTTokenFactory) *cobra.Command {
 	var rootCmd = cobra.Command{
 		Use:   "gh-app-token",
 		Short: "A cli utility to manage GitHub App tokens",
@@ -23,7 +25,7 @@ func newRootCmd(githubClientFactory GithubClientFactory) *cobra.Command {
 		},
 	}
 
-	rootCmd.AddCommand(newCreateCmd(githubClientFactory))
+	rootCmd.AddCommand(newCreateCmd(githubClientFactory, jwtTokenFactory))
 	rootCmd.AddCommand(newRevokeCmd(githubClientFactory))
 	rootCmd.AddCommand(newInstallationCmd())
 
@@ -33,7 +35,7 @@ func newRootCmd(githubClientFactory GithubClientFactory) *cobra.Command {
 func Execute(args []string, out io.Writer, err io.Writer) error {
 	viper.AutomaticEnv()
 
-	rootCmd := newRootCmd(github.NewClient)
+	rootCmd := newRootCmd(github.NewClient, jwt.NewToken)
 
 	rootCmd.SetArgs(args)
 	rootCmd.SetOut(out)

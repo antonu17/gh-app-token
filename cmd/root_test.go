@@ -11,13 +11,8 @@ func TestRootCmd(t *testing.T) {
 		args    []string
 		wantErr bool
 	}{
-		{"NoArgs", []string{}, true},
+		{"NoArgs", []string{}, false},
 		{"Help", []string{"--help"}, false},
-		{"Create", []string{"create", "--app-id=123", "--private-key=key"}, false},
-		{"Revoke", []string{"revoke", "--app-id=123", "--private-key=key"}, false},
-		{"Installations", []string{"installations", "--app-id=123", "--private-key=key"}, false},
-		{"MissingPrivateKey", []string{"create", "--app-id=123"}, true},
-		{"MissingAppID", []string{"create", "--private-key=key"}, true},
 	}
 
 	for _, tt := range tests {

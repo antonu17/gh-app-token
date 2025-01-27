@@ -4,11 +4,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/n26/gh-app-token/internal/jwt"
 	"github.com/spf13/cobra"
 )
 
-func newCreateCmd(githubClientFactory GithubClientFactory) *cobra.Command {
+func newCreateCmd(githubClientFactory GithubClientFactory, jwtTokenFactory JWTTokenFactory) *cobra.Command {
 	const defaultTimeout = 10 * time.Second
 	var createCmd = cobra.Command{
 		Use:   "create",
@@ -26,7 +25,7 @@ func newCreateCmd(githubClientFactory GithubClientFactory) *cobra.Command {
 				privateKey = string(content)
 			}
 
-			appToken, err := jwt.NewToken(appID, privateKey)
+			appToken, err := jwtTokenFactory(appID, privateKey)
 			if err != nil {
 				cmd.PrintErrln("error generating JWT token for Github App:", err)
 				return
