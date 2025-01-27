@@ -27,7 +27,7 @@ func newRootCmd(githubClientFactory GithubClientFactory, jwtTokenFactory JWTToke
 
 	rootCmd.AddCommand(newCreateCmd(githubClientFactory, jwtTokenFactory))
 	rootCmd.AddCommand(newRevokeCmd(githubClientFactory))
-	rootCmd.AddCommand(newInstallationCmd())
+	rootCmd.AddCommand(newInstallationsCmd(githubClientFactory, jwtTokenFactory))
 
 	return &rootCmd
 }

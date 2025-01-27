@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"os"
+	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -12,40 +12,32 @@ func newCreateCmd(githubClientFactory GithubClientFactory, jwtTokenFactory JWTTo
 	var createCmd = cobra.Command{
 		Use:   "create",
 		Short: "Create a new GitHub App token",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			appID, _ := cmd.Flags().GetString("app-id")
-			privateKey, _ := cmd.Flags().GetString("private-key")
-
-			if _, err := os.Stat(privateKey); err == nil {
-				content, err := os.ReadFile(privateKey)
-				if err != nil {
-					cmd.PrintErrln("error reading private key file:", err)
-					return
-				}
-				privateKey = string(content)
-			}
+			privateKey := loadPrivateKey(cmd)
 
 			appToken, err := jwtTokenFactory(appID, privateKey)
 			if err != nil {
-				cmd.PrintErrln("error generating JWT token for Github App:", err)
-				return
+				err := fmt.Errorf("error generating JWT token for Github App: %w", err)
+				return err
 			}
 
 			gh := githubClientFactory(appToken)
 
 			installationID, err := gh.GetInstallationID()
 			if err != nil {
-				cmd.PrintErrln("error getting installation id:", err)
-				return
+				err := fmt.Errorf("error getting installation id: %w", err)
+				return err
 			}
 
 			installationToken, err := gh.CreateInstallationToken(installationID)
 			if err != nil {
-				cmd.PrintErrln("error generating installation token for Github App:", err)
-				return
+				err := fmt.Errorf("error generating installation token for Github App: %w", err)
+				return err
 			}
 
 			cmd.Println(installationToken)
+			return nil
 		},
 	}
 
@@ -54,6 +46,5 @@ func newCreateCmd(githubClientFactory GithubClientFactory, jwtTokenFactory JWTTo
 	createCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		flagsPreRunCheck(cmd, args)
 	}
-
 	return &createCmd
 }

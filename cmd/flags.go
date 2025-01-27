@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -43,4 +45,18 @@ func requiredFlag(cmd *cobra.Command, name string, value string, usage string, e
 		}
 	}
 	return preRunFn
+}
+
+func loadPrivateKey(cmd *cobra.Command) string {
+	privateKey, _ := cmd.Flags().GetString("private-key")
+
+	if _, err := os.Stat(privateKey); err == nil {
+		content, err := os.ReadFile(privateKey)
+		if err != nil {
+			cmd.PrintErrln("error reading private key file:", err)
+			return ""
+		}
+		privateKey = string(content)
+	}
+	return privateKey
 }
